@@ -30,6 +30,17 @@ import refundRoutes from "./modules/refund/refund.routes";
 import recommendationRoutes from "./modules/recommendation/recommendation.routes";
 
 // =====================================================
+// ENV VALIDATION — crash early if critical vars missing
+// =====================================================
+const REQUIRED_ENV = ["MONGO_URI", "JWT_SECRET", "RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET"];
+const missing = REQUIRED_ENV.filter((key) => !process.env[key]);
+if (missing.length > 0) {
+  console.error(`❌ CRITICAL: Missing required environment variables: ${missing.join(", ")}`);
+  console.error("Please set these in your .env file before starting the server.");
+  process.exit(1);
+}
+
+// =====================================================
 // PROCESS-LEVEL GUARDIANS (MUST be BEFORE app.listen)
 // Catches everything that escapes Express middleware
 // =====================================================
@@ -91,16 +102,33 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 // 6. Enterprise Security Layer: Distributed Rate Limiting Shield
-// const apiSecurityLimiter = rateLimit({
-//   windowMs: 15 * 60 * 1000,
-//   max: 100,
-//   message: {
-//     message: "Too many requests detected from this connection. Shield active. Retry in 15 minutes.",
-//   },
-//   standardHeaders: true,
-//   legacyHeaders: false,
-// });
-// app.use("/api/", apiSecurityLimiter);
+const apiSecurityLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: {
+    message: "Too many requests detected from this connection. Shield active. Retry in 15 minutes.",
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use("/api/", apiSecurityLimiter);
+
+// Stricter limits on sensitive routes
+app.use("/api/auth/login", rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { message: "Too many login attempts. Try again in 15 minutes." },
+  standardHeaders: true,
+  legacyHeaders: false,
+}));
+
+app.use("/api/payments/verify", rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: { message: "Too many payment verification attempts." },
+  standardHeaders: true,
+  legacyHeaders: false,
+}));
 
 // 7. Core Application Endpoint Routes Matrix
 app.use("/api/payments", paymentRoutes);
@@ -190,7 +218,7 @@ const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`===================================================`);
   console.log(` 🚀 STAY FINDER 2.0 API RUNNING ON PORT: ${PORT}      `);
-  console.log(` 🛡️  RATE LIMITER COMPLIANCE ACTIVE                 `);
+  console.log(` 🛡️  RATE LIMITER: 100 req/15min per IP                `);
   console.log(` 🏭 MODE: ${process.env.NODE_ENV || "production"}  `);
   console.log(`===================================================`);
 });
@@ -203,8 +231,13 @@ const shutdown = async (signal: string) => {
   server.close(() => {
     mongoose.connection.close(false).then(() => {
       console.log("MongoDB connection closed.");
-      process.exit(0);
     });
+    const { redisClient } = require("./config/redis");
+    if (redisClient) {
+      redisClient.quit();
+      console.log("Redis connection closed.");
+    }
+    process.exit(0);
   });
   // Force exit if graceful shutdown takes too long
   setTimeout(() => process.exit(1), 10000);

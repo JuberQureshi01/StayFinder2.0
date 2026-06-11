@@ -72,6 +72,7 @@ export const verifyPayment = asyncHandler(
       }
       booking.status = "confirmed";
       booking.razorpayPaymentId = razorpay_payment_id;
+      booking.razorpayOrderId = razorpay_order_id;
       await booking.save();
 
       return res.status(200).json({ message: "Payment verified successfully" });

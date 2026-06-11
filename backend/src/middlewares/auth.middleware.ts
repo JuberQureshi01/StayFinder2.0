@@ -28,10 +28,18 @@ export const authenticate = asyncHandler(
       });
     }
 
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET as string,
-    ) as JwtPayload;
+    let decoded: JwtPayload;
+    try {
+      decoded = jwt.verify(
+        token,
+        process.env.JWT_SECRET as string,
+      ) as JwtPayload;
+    } catch (err: any) {
+      const message = err.name === "TokenExpiredError"
+        ? "Your session has expired. Please log in again."
+        : "Invalid access token. Please log in again.";
+      return res.status(401).json({ message });
+    }
 
     // 3. Optimize DB overhead: Fetch only minimal fields required for authorization checkpoints
     const activeUser = await User.findById(decoded.id).select("_id email role banned profile.verified");

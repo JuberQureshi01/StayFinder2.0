@@ -34,11 +34,11 @@ function AppLayout() {
   const isAuthPage = location.pathname === "/login" || location.pathname === "/forgot-password" || location.pathname.startsWith("/reset-password");
 
   return (
+    <ErrorBoundary>
     <div className="min-h-screen flex flex-col font-sans bg-white text-gray-900">
       {!isAuthPage && <Navbar />}
 
       <main className={`flex-grow ${!isAuthPage ? "pt-16 sm:pt-20 pb-16 md:pb-0" : ""}`}>
-        <ErrorBoundary>
         <Routes>
           {/* STANDALONE PAGES (no Navbar/Footer) */}
           <Route path="/login" element={<Login />} />
@@ -78,12 +78,12 @@ function AppLayout() {
             <Route path="/host/edit-listing/:id" element={<EditListing />} />
           </Route>
         </Routes>
-        </ErrorBoundary>
       </main>
 
       {!isAuthPage && <Footer />}
       <Toaster richColors position="bottom-right" />
     </div>
+    </ErrorBoundary>
   );
 }
 
