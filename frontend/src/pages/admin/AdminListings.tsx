@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { Check, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import apiFetch from "../../services/apiFetch";
-import { SkeletonTable } from "../../components/ui/skeleton";
+import apiFetch from "@/services/apiFetch";
+import { SkeletonTable } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 
 interface Listing {
   _id: string;
@@ -18,6 +19,7 @@ interface Listing {
 const AdminListings = () => {
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
+  const [actingId, setActingId] = useState<string | null>(null);
 
   const fetchListings = async () => {
     setLoading(true);
@@ -38,22 +40,28 @@ const AdminListings = () => {
   }, []);
 
   const handleApprove = async (id: string) => {
+    setActingId(id);
     try {
       await apiFetch.patch(`/admin/listings/${id}/approve`);
       toast.success("Listing approved");
       fetchListings();
     } catch {
       toast.error("Failed to approve listing");
+    } finally {
+      setActingId(null);
     }
   };
 
   const handleReject = async (id: string) => {
+    setActingId(id);
     try {
       await apiFetch.patch(`/admin/listings/${id}/reject`);
       toast.success("Listing rejected");
       fetchListings();
     } catch {
       toast.error("Failed to reject listing");
+    } finally {
+      setActingId(null);
     }
   };
 
@@ -127,17 +135,19 @@ const AdminListings = () => {
                     <div className="flex justify-end gap-2">
                       <button
                         onClick={() => handleApprove(listing._id)}
+                        disabled={actingId === listing._id}
                         aria-label="Approve listing"
-                        className="rounded-lg bg-green-50 p-2 text-green-600 transition hover:bg-green-100"
+                        className="rounded-lg bg-green-50 p-2 text-green-600 transition hover:bg-green-100 disabled:opacity-50"
                       >
-                        <Check className="h-4 w-4" />
+                        {actingId === listing._id ? <Spinner size="sm" /> : <Check className="h-4 w-4" />}
                       </button>
                       <button
                         onClick={() => handleReject(listing._id)}
+                        disabled={actingId === listing._id}
                         aria-label="Reject listing"
-                        className="rounded-lg bg-red-50 p-2 text-red-600 transition hover:bg-red-100"
+                        className="rounded-lg bg-red-50 p-2 text-red-600 transition hover:bg-red-100 disabled:opacity-50"
                       >
-                        <X className="h-4 w-4" />
+                        {actingId === listing._id ? <Spinner size="sm" /> : <X className="h-4 w-4" />}
                       </button>
                     </div>
                   </td>

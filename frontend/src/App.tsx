@@ -1,97 +1,107 @@
-import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { Suspense, lazy } from "react";
 import { Toaster } from "sonner";
-import ErrorBoundary from "./components/ErrorBoundary";
-import Navbar from "./components/Navbar";
-import Footer from "./components/Footer";
-import ProtectedRoute from "./components/ProtectedRoute";
 
-// Pages
-import Home from "./pages/Home";
-import Search from "./pages/SearchPage";
-import ListingDetails from "./pages/ListingDetails";
-import Login from "./pages/Login";
-import Trips from "./pages/Trips";
-import Wishlist from "./pages/Wishlist";
-import Chat from "./pages/Chat";
-import HostDashboard from "./pages/HostDashboard";
-import HostBookings from "./pages/HostBookings";
-import CreateListing from "./pages/CreateListing";
-import ForgotPassword from "./pages/ForgotPassword";
-import ResetPassword from "./pages/ResetPassword";
-import Profile from "./pages/Profile";
-import BecomeHost from "./pages/BecomeHost";
-import EditListing from "./pages/EditListing";
+import ErrorBoundary from "@/components/common/ErrorBoundary";
+import Navbar from "@/components/common/Navbar";
+import Footer from "@/components/common/Footer";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
 
-// Admin Pages
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import AdminUsers from "./pages/admin/AdminUsers";
-import AdminListings from "./pages/admin/AdminListings";
-import AdminBookings from "./pages/admin/AdminBookings";
-import AdminHosts from "./pages/admin/AdminHosts";
+// Public pages
+const Home = lazy(() => import("@/pages/public/Home"));
+const SearchPage = lazy(() => import("@/pages/public/SearchPage"));
+const ListingDetails = lazy(() => import("@/pages/public/ListingDetails"));
+const Login = lazy(() => import("@/pages/public/Login"));
+const ForgotPassword = lazy(() => import("@/pages/public/ForgotPassword"));
+const ResetPassword = lazy(() => import("@/pages/public/ResetPassword"));
+
+// User pages
+const Trips = lazy(() => import("@/pages/user/Trips"));
+const Wishlist = lazy(() => import("@/pages/user/Wishlist"));
+const Profile = lazy(() => import("@/pages/user/Profile"));
+const Chat = lazy(() => import("@/pages/user/Chat"));
+const BecomeHost = lazy(() => import("@/pages/user/BecomeHost"));
+
+// Host pages
+const HostDashboard = lazy(() => import("@/pages/host/HostDashboard"));
+const HostBookings = lazy(() => import("@/pages/host/HostBookings"));
+const CreateListing = lazy(() => import("@/pages/host/CreateListing"));
+const EditListing = lazy(() => import("@/pages/host/EditListing"));
+
+// Admin pages
+const AdminDashboard = lazy(() => import("@/pages/admin/AdminDashboard"));
+const AdminUsers = lazy(() => import("@/pages/admin/AdminUsers"));
+const AdminListings = lazy(() => import("@/pages/admin/AdminListings"));
+const AdminBookings = lazy(() => import("@/pages/admin/AdminBookings"));
+const AdminHosts = lazy(() => import("@/pages/admin/AdminHosts"));
+
+const fallback = (
+  <div className="flex h-screen items-center justify-center">Loading...</div>
+);
+
+const isAuthRoute = (pathname: string) =>
+  pathname === "/login" ||
+  pathname === "/forgot-password" ||
+  pathname.startsWith("/reset-password");
 
 function AppLayout() {
   const location = useLocation();
-  const isAuthPage = location.pathname === "/login" || location.pathname === "/forgot-password" || location.pathname.startsWith("/reset-password");
+  const hideNavbar = isAuthRoute(location.pathname);
 
   return (
-    <ErrorBoundary>
     <div className="min-h-screen flex flex-col font-sans bg-white text-gray-900">
-      {!isAuthPage && <Navbar />}
+      {!hideNavbar && <Navbar />}
 
-      <main className={`flex-grow ${!isAuthPage ? "pt-16 sm:pt-20 pb-16 md:pb-0" : ""}`}>
-        <Routes>
-          {/* STANDALONE PAGES (no Navbar/Footer) */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/reset-password/:token" element={<ResetPassword />} />
+      <main className={`flex-grow ${!hideNavbar ? "pt-16 sm:pt-20 pb-16 md:pb-0" : ""}`}>
+        <Suspense fallback={fallback}>
+          <Routes>
+            {/* Public */}
+            <Route path="/" element={<Home />} />
+            <Route path="/search" element={<SearchPage />} />
+            <Route path="/listing/:id" element={<ListingDetails />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password/:token" element={<ResetPassword />} />
 
-          {/* PUBLIC ZONE */}
-          <Route path="/" element={<Home />} />
-          <Route path="/search" element={<Search />} />
-          <Route path="/listing/:id" element={<ListingDetails />} />
+            {/* User (protected) */}
+            <Route path="/trips" element={<ProtectedRoute><Trips /></ProtectedRoute>} />
+            <Route path="/wishlist" element={<ProtectedRoute><Wishlist /></ProtectedRoute>} />
+            <Route path="/account" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+            <Route path="/chat/:bookingId" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
+            <Route path="/become-host" element={<ProtectedRoute><BecomeHost /></ProtectedRoute>} />
 
-          {/* CUSTOMER ZONE (Requires Auth) */}
-          <Route element={<ProtectedRoute />}>
-            <Route path="/trips" element={<Trips />} />
-            <Route path="/wishlist" element={<Wishlist />} />
-            <Route path="/account" element={<Profile />} />
-            <Route path="/chat/:bookingId" element={<Chat />} />
-            <Route path="/become-host" element={<BecomeHost />} />
-          </Route>
+            {/* Host (protected) */}
+            <Route path="/host/dashboard" element={<ProtectedRoute allowedRoles={["host", "admin"]}><HostDashboard /></ProtectedRoute>} />
+            <Route path="/host/bookings" element={<ProtectedRoute allowedRoles={["host", "admin"]}><HostBookings /></ProtectedRoute>} />
+            <Route path="/host/create-listing" element={<ProtectedRoute allowedRoles={["host", "admin"]}><CreateListing /></ProtectedRoute>} />
+            <Route path="/host/edit-listing/:id" element={<ProtectedRoute allowedRoles={["host", "admin"]}><EditListing /></ProtectedRoute>} />
 
-          {/* ADMIN ZONE (Requires Auth AND 'admin' role) */}
-          <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
-            <Route path="/admin" element={<AdminDashboard />} />
-            <Route path="/admin/users" element={<AdminUsers />} />
-            <Route path="/admin/listings" element={<AdminListings />} />
-            <Route path="/admin/bookings" element={<AdminBookings />} />
-            <Route path="/admin/hosts" element={<AdminHosts />} />
-          </Route>
+            {/* Admin (protected) */}
+            <Route path="/admin" element={<ProtectedRoute allowedRoles={["admin"]}><AdminDashboard /></ProtectedRoute>} />
+            <Route path="/admin/users" element={<ProtectedRoute allowedRoles={["admin"]}><AdminUsers /></ProtectedRoute>} />
+            <Route path="/admin/listings" element={<ProtectedRoute allowedRoles={["admin"]}><AdminListings /></ProtectedRoute>} />
+            <Route path="/admin/bookings" element={<ProtectedRoute allowedRoles={["admin"]}><AdminBookings /></ProtectedRoute>} />
+            <Route path="/admin/hosts" element={<ProtectedRoute allowedRoles={["admin"]}><AdminHosts /></ProtectedRoute>} />
 
-          {/* HOST ZONE (Requires Auth AND 'host' or 'admin' role) */}
-          <Route
-            element={<ProtectedRoute allowedRoles={["host", "admin"]} />}
-          >
-            <Route path="/host/dashboard" element={<HostDashboard />} />
-            <Route path="/host/bookings" element={<HostBookings />} />
-            <Route path="/host/create-listing" element={<CreateListing />} />
-            <Route path="/host/edit-listing/:id" element={<EditListing />} />
-          </Route>
-        </Routes>
+            {/* 404 */}
+            <Route path="*" element={<div className="flex h-screen items-center justify-center">404 Page Not Found</div>} />
+          </Routes>
+        </Suspense>
       </main>
 
-      {!isAuthPage && <Footer />}
-      <Toaster richColors position="bottom-right" />
+      {!hideNavbar && <Footer />}
     </div>
-    </ErrorBoundary>
   );
 }
 
 function App() {
   return (
-    <Router>
-      <AppLayout />
-    </Router>
+    <BrowserRouter>
+      <ErrorBoundary>
+        <AppLayout />
+        <Toaster richColors position="bottom-right" />
+      </ErrorBoundary>
+    </BrowserRouter>
   );
 }
 

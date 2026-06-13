@@ -73,7 +73,7 @@ router.put(
   authenticate,
   authorizeRoles("host", "admin"),
   validateRequest(idParamSchema, "params"),
-  upload.array("images", 5),
+  upload.array("images", 10),
   updateListing,
 );
 

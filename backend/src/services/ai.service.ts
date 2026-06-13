@@ -38,9 +38,9 @@ const callWithRetry = async (
       const isRetryable = status === 429 || status === 503;
 
       if (isRetryable && attempt < maxRetries - 1) {
-        console.warn(
-          `AI API ${status} (attempt ${attempt + 1}/${maxRetries}), retrying...`,
-        );
+        // console.warn(
+        //   `AI API ${status} (attempt ${attempt + 1}/${maxRetries}), retrying...`,
+        // );
         continue;
       }
 

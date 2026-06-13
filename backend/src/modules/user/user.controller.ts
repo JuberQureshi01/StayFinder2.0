@@ -1,14 +1,11 @@
-import crypto from "crypto";
-import { EmailService } from "../../services/email.service";
 import { Response } from "express";
 import User from "./user.model";
 import { asyncHandler } from "../../middlewares/async.middleware";
 import { AuthenticatedRequest } from "../../middlewares/auth.middleware";
-// @access  Private
+
+
 export const getUserProfile = asyncHandler(
   async (req: AuthenticatedRequest, res: Response) => {
-    // Find the user by the ID injected by the auth middleware, excluding the password
-    // console.log("Fetching profile for user ID:", req.user);
     const user = await User.findById(req.user._id).select("-password");
 
     if (!user) {
@@ -92,11 +89,7 @@ export const toggleWishlist = asyncHandler(async (req: AuthenticatedRequest, res
   });
 });
 
-/**
- * @desc    Fetches the user's saved wishlist properties with fully populated listing cards
- * @route   GET /api/users/wishlist
- * @access  Protected
- */
+
 export const getUserWishlist = asyncHandler(
   async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user._id;

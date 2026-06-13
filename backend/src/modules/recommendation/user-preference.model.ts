@@ -25,7 +25,5 @@ const userPreferenceSchema = new Schema<IUserPreference>(
   { timestamps: true },
 );
 
-userPreferenceSchema.index({ user: 1 });
-
 const UserPreference = mongoose.model<IUserPreference>("UserPreference", userPreferenceSchema);
 export default UserPreference;

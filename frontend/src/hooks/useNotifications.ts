@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useSelector } from "react-redux";
-import { RootState } from "../app/store";
-import { socket } from "../services/socket";
-import apiFetch from "../services/apiFetch";
+import { RootState } from "@/app/store";
+import { socket } from "@/services/socket";
+import apiFetch from "@/services/apiFetch";
 
 interface Notification {
   _id: string;

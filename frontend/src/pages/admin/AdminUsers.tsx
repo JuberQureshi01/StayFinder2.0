@@ -2,9 +2,10 @@ import { useEffect, useState } from "react";
 import { Search, Ban, CheckCircle, Loader2 } from "lucide-react";
 import { useSelector } from "react-redux";
 import { toast } from "sonner";
-import { RootState } from "../../app/store";
-import apiFetch from "../../services/apiFetch";
-import { SkeletonTable } from "../../components/ui/skeleton";
+import { RootState } from "@/app/store";
+import apiFetch from "@/services/apiFetch";
+import { SkeletonTable } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 
 interface User {
   _id: string;
@@ -20,6 +21,7 @@ const AdminUsers = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
+  const [togglingId, setTogglingId] = useState<string | null>(null);
   const currentUser = useSelector((state: RootState) => state.auth.user);
 
   const fetchUsers = async () => {
@@ -47,12 +49,15 @@ const AdminUsers = () => {
   };
 
   const handleBan = async (id: string, banned: boolean) => {
+    setTogglingId(id);
     try {
       await apiFetch.patch(`/admin/users/${id}/${banned ? "unban" : "ban"}`);
       toast.success(banned ? "User unbanned" : "User banned");
       fetchUsers();
     } catch {
       toast.error("Failed to update user");
+    } finally {
+      setTogglingId(null);
     }
   };
 
@@ -139,14 +144,19 @@ const AdminUsers = () => {
                         <>
                           <button
                             onClick={() => handleBan(user._id, !!user.banned)}
+                            disabled={togglingId === user._id}
                             aria-label={user.banned ? `Unban ${user.profile?.name || user.email}` : `Ban ${user.profile?.name || user.email}`}
-                            className={`flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                            className={`flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium transition disabled:opacity-50 ${
                               user.banned
                                 ? "bg-green-50 text-green-700 hover:bg-green-100"
                                 : "bg-red-50 text-red-700 hover:bg-red-100"
                             }`}
                           >
-                            <Ban className="h-3 w-3" />
+                            {togglingId === user._id ? (
+                              <Spinner size="sm" />
+                            ) : (
+                              <Ban className="h-3 w-3" />
+                            )}
                             {user.banned ? "Unban" : "Ban"}
                           </button>
                         </>

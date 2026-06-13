@@ -1,4 +1,5 @@
 import Razorpay from "razorpay";
+import crypto from "crypto";
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID as string,
@@ -6,6 +7,29 @@ const razorpay = new Razorpay({
 });
 
 export class PaymentService {
+  static async createOrder(amount: number, receipt: string) {
+    const options = {
+      amount: Math.round(amount * 100),
+      currency: "INR",
+      receipt,
+    };
+    const order = await razorpay.orders.create(options);
+    return order;
+  }
+
+  static verifySignature(
+    razorpayOrderId: string,
+    razorpayPaymentId: string,
+    razorpaySignature: string,
+  ): boolean {
+    const body = razorpayOrderId + "|" + razorpayPaymentId;
+    const expectedSignature = crypto
+      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET!)
+      .update(body)
+      .digest("hex");
+    return expectedSignature === razorpaySignature;
+  }
+
   static async initiateRefund(paymentId: string, amount?: number): Promise<{ id: string; status: string } | null> {
     try {
       const options: any = {};

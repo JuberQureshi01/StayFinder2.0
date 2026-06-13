@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import apiFetch from "../../services/apiFetch";
-import { SkeletonTable } from "../../components/ui/skeleton";
+import apiFetch from "@/services/apiFetch";
+import { SkeletonTable } from "@/components/ui/skeleton";
 
 interface Booking {
   _id: string;

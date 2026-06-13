@@ -16,9 +16,8 @@ export class SocketService {
       },
     });
 
-    // Catch-all: prevents a single crashing event from taking down the server
     this.io.on("connection", (socket: Socket) => {
-      console.log(`🔌 Client Connected: ${socket.id}`);
+      // console.log(`🔌 Client Connected: ${socket.id}`);
 
       // Wrap every socket event handler in a boundary so no error escapes
       const safeOn = (event: string, handler: (...args: any[]) => void | Promise<void>) => {
@@ -35,13 +34,13 @@ export class SocketService {
       safeOn("join_room", (bookingId: string) => {
         if (!bookingId || typeof bookingId !== "string") return;
         socket.join(bookingId);
-        console.log(`Socket ${socket.id} joined Chat Room: ${bookingId}`);
+        // console.log(`Socket ${socket.id} joined Chat Room: ${bookingId}`);
       });
 
       safeOn("join_user_room", (userId: string) => {
         if (!userId || typeof userId !== "string") return;
         socket.join(userId);
-        console.log(`Socket ${socket.id} joined User Room: ${userId}`);
+        // console.log(`Socket ${socket.id} joined User Room: ${userId}`);
       });
 
       safeOn("typing", (data: { bookingId: string; userName: string }) => {
@@ -95,7 +94,7 @@ export class SocketService {
       });
 
       socket.on("disconnect", (reason: string) => {
-        console.log(`🛑 Client Disconnected: ${socket.id} (${reason})`);
+        // console.log(`🛑 Client Disconnected: ${socket.id} (${reason})`);
       });
     });
   }

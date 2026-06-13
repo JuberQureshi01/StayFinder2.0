@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { Check, X, Loader2, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
-import apiFetch from "../../services/apiFetch";
-import { SkeletonTable } from "../../components/ui/skeleton";
+import apiFetch from "@/services/apiFetch";
+import { SkeletonTable } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 
 interface Application {
   _id: string;
@@ -24,6 +25,7 @@ const AdminHosts = () => {
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("pending");
+  const [actingId, setActingId] = useState<string | null>(null);
 
   const fetchApplications = async () => {
     setLoading(true);
@@ -42,23 +44,30 @@ const AdminHosts = () => {
   }, [filter]);
 
   const handleApprove = async (id: string) => {
+    setActingId(id);
     try {
       await apiFetch.patch(`/host-application/${id}/approve`);
       toast.success("Host approved!");
       fetchApplications();
     } catch {
       toast.error("Failed to approve");
+    } finally {
+      setActingId(null);
     }
   };
 
   const handleReject = async (id: string) => {
     const note = prompt("Reason for rejection (optional):");
+    if (note === null) return;
+    setActingId(id);
     try {
       await apiFetch.patch(`/host-application/${id}/reject`, { adminNote: note || undefined });
       toast.success("Application rejected");
       fetchApplications();
     } catch {
       toast.error("Failed to reject");
+    } finally {
+      setActingId(null);
     }
   };
 
@@ -126,17 +135,19 @@ const AdminHosts = () => {
                   )}
                 </div>
 
-                {app.status === "pending" && (
+                  {app.status === "pending" && (
                   <div className="ml-4 flex gap-2">
                     <button onClick={() => handleApprove(app._id)}
+                      disabled={actingId === app._id}
                       aria-label="Approve host"
-                      className="rounded-lg bg-green-50 p-2 text-green-600 hover:bg-green-100">
-                      <Check className="h-5 w-5" />
+                      className="rounded-lg bg-green-50 p-2 text-green-600 transition hover:bg-green-100 disabled:opacity-50">
+                      {actingId === app._id ? <Spinner size="sm" /> : <Check className="h-5 w-5" />}
                     </button>
                     <button onClick={() => handleReject(app._id)}
+                      disabled={actingId === app._id}
                       aria-label="Reject host"
-                      className="rounded-lg bg-red-50 p-2 text-red-600 hover:bg-red-100">
-                      <X className="h-5 w-5" />
+                      className="rounded-lg bg-red-50 p-2 text-red-600 transition hover:bg-red-100 disabled:opacity-50">
+                      {actingId === app._id ? <Spinner size="sm" /> : <X className="h-5 w-5" />}
                     </button>
                   </div>
                 )}

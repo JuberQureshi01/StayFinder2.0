@@ -104,7 +104,7 @@ StayFinder2.0/
 ├── backend/
 │   ├── package.json
 │   └── src/
-│       ├── server.ts                  # Express + Socket.IO + cron
+│       ├── server.ts                  # Express + Socket.IO + graceful shutdown
 │       ├── config/
 │       │   ├── db.ts                  # MongoDB with auto-reconnect
 │       │   ├── redis.ts               # Redis cache connection
@@ -114,29 +114,34 @@ StayFinder2.0/
 │       │   ├── async.middleware.ts     # Async error wrapper
 │       │   ├── auth.middleware.ts      # JWT + role-based access
 │       │   ├── cache.middleware.ts     # Redis response caching
+│       │   ├── error.middleware.ts     # Global error handler
 │       │   └── validate.middleware.ts  # Zod validation
 │       ├── modules/
 │       │   ├── admin/                 # Dashboard, users, listings, bookings
-│       │   ├── auth/                  # Register, login, Google OAuth, password reset
-│       │   ├── booking/              # Create, cancel, refund flow
-│       │   ├── chat/                 # Real-time messaging + typing
-│       │   ├── host-application/     # Host verification
+│       │   ├── auth/                  # Register, login, Google OAuth, password reset (thin)
+│       │   ├── booking/               # Create, cancel, refund flow (thin)
+│       │   ├── chat/                  # Real-time messaging + typing
+│       │   ├── host-application/      # Host verification
 │       │   ├── itinerary/            # AI travel plans
-│       │   ├── listing/              # CRUD, search, AI description
+│       │   ├── listing/              # CRUD, search, AI description (thin)
 │       │   ├── notification/         # DB + Socket.IO push
-│       │   ├── payment/             # Razorpay orders, verify, webhooks
+│       │   ├── payment/             # Razorpay orders, verify, webhooks (thin)
 │       │   ├── recommendation/      # 4-level engine
 │       │   ├── refund/              # Refund tracking
-│       │   ├── review/              # Create, update, listing reviews
+│       │   ├── review/              # Create, update, listing reviews (thin)
 │       │   └── user/               # Profile, wishlist, role upgrade
 │       ├── services/
 │       │   ├── ai.service.ts        # Gemini integration
+│       │   ├── auth.service.ts      # Register, login, Google, password reset
 │       │   ├── cloudinary.service.ts
 │       │   ├── email.service.ts     # Invoice, reset, refund emails
+│       │   ├── listing.service.ts   # Search queries, availability, earnings
 │       │   ├── notification.service.ts
-│       │   ├── payment.service.ts   # Razorpay refunds
+│       │   ├── payment.service.ts   # Order creation, verification, refunds
 │       │   ├── pdf.service.ts
 │       │   ├── recommendation.service.ts
+│       │   ├── refund-policy.service.ts
+│       │   ├── review.service.ts    # Listing rating recalculations
 │       │   └── socket.service.ts
 │       ├── utils/
 │       │   └── AppError.ts
@@ -146,54 +151,60 @@ StayFinder2.0/
 │   ├── package.json
 │   └── src/
 │       ├── main.tsx                  # Entry — Redux + Google OAuth
-│       ├── App.tsx                   # Router + ErrorBoundary
-│       ├── app/store.ts
-│       ├── features/auth/            # authSlice
-│       ├── services/
-│       │   ├── apiFetch.ts           # Axios + auth interceptor
-│       │   ├── paths.ts
-│       │   └── socket.ts
+│       ├── App.tsx                   # BrowserRouter + Routes + lazy pages
+│       ├── app/
+│       │   └── store.ts
+│       ├── assets/
+│       ├── components/
+│       │   ├── auth/                 # AuthModal, ProtectedRoute
+│       │   ├── common/               # Navbar, Footer, ErrorBoundary, modals
+│       │   ├── listing/              # ListingCard, SearchFilters, MapContainer
+│       │   ├── review/               # ReviewForm, ReviewModal, ReviewSummary
+│       │   └── ui/                   # shadcn primitives (skeleton, spinner, etc.)
+│       ├── features/
+│       │   └── auth/                 # authSlice
 │       ├── hooks/
 │       │   └── useNotifications.ts
-│       ├── components/
-│       │   ├── Navbar.tsx
-│       │   ├── Footer.tsx
-│       │   ├── AuthModal.tsx
-│       │   ├── ListingCard.tsx
-│       │   ├── ErrorBoundary.tsx
-│       │   ├── ProtectedRoute.tsx
-│       │   ├── NotificationBell.tsx
-│       │   ├── WishlistButton.tsx
-│       │   ├── ReviewForm.tsx / ReviewModal.tsx / ReviewSummary.tsx
-│       │   ├── SearchFilters.tsx
-│       │   ├── AvailabilityCalendar.tsx
-│       │   ├── BookingDatePicker.tsx
-│       │   ├── MapContainer.tsx
-│       │   └── ui/                   # shadcn primitives
-│       └── pages/
-│           ├── Home.tsx
-│           ├── SearchPage.tsx
-│           ├── ListingDetails.tsx
-│           ├── Trips.tsx
-│           ├── Login.tsx
-│           ├── Wishlist.tsx
-│           ├── Chat.tsx
-│           ├── Profile.tsx
-│           ├── BecomeHost.tsx
-│           ├── CreateListing.tsx
-│           ├── EditListing.tsx
-│           ├── HostDashboard.tsx
-│           ├── HostBookings.tsx
-│           ├── ForgotPassword.tsx
-│           ├── ResetPassword.tsx
-│           └── admin/
-│               ├── AdminDashboard.tsx
-│               ├── AdminUsers.tsx
-│               ├── AdminListings.tsx
-│               ├── AdminBookings.tsx
-│               └── AdminHosts.tsx
+│       ├── lib/
+│       │   └── utils.ts              # cn() helper
+│       ├── pages/
+│       │   ├── public/               # Home, SearchPage, ListingDetails, Login, etc.
+│       │   ├── user/                 # Trips, Wishlist, Chat, Profile, BecomeHost
+│       │   ├── host/                 # HostDashboard, HostBookings, Create/EditListing
+│       │   └── admin/               # AdminDashboard, Users, Listings, Bookings, Hosts
+│       └── services/
+│           ├── apiFetch.ts           # Axios + auth interceptor
+│           ├── paths.ts
+│           └── socket.ts
 └── .env.example
 ```
+
+---
+
+## Architecture
+
+### Backend — Thin Controller Pattern
+
+Controllers receive the request, call a service, return a response. All business logic lives in `services/`.
+
+| Module      | Controller (thin)        | Service                          |
+|------------|--------------------------|----------------------------------|
+| Auth       | `auth.controller.ts`     | `services/auth.service.ts`       |
+| Listing    | `listing.controller.ts`  | `services/listing.service.ts`    |
+| Booking    | `booking.controllers.ts` | `modules/booking/booking.service.ts` |
+| Review     | `review.controller.ts`   | `services/review.service.ts`     |
+| Payment    | `payment.controller.ts`  | `services/payment.service.ts`    |
+
+Error handling uses `asyncHandler` (wraps every controller), `AppError`, and a global error handler in `middlewares/error.middleware.ts`.
+
+### Frontend — Component-Based Routing
+
+`App.tsx` uses `BrowserRouter` + `Routes` + `Route` with lazy-loaded pages:
+
+- `Navbar` is shown on all pages except auth pages (login, forgot-password, reset-password)
+- Content has `pt-16 sm:pt-20` to sit below the fixed navbar
+- `ProtectedRoute` wraps pages that require authentication (uses `children` pattern)
+- Role-based access via `allowedRoles` prop
 
 ---
 
@@ -202,65 +213,63 @@ StayFinder2.0/
 ### 1. Authentication & Authorization
 
 **Backend:**
-
-1. `POST /api/auth/register` — Zod validates `{ name, email, password }`, bcrypt hashes password (10 rounds), JWT signed with `{ id, role }` (7d expiry)
-2. `POST /api/auth/login` — selects `+password` (field is `select: false`), compares bcrypt hash
+1. `POST /api/auth/register` — Zod validates `{ name, email, password }`, service hashes with bcrypt (10 rounds), signs JWT (7d)
+2. `POST /api/auth/login` — selects `+password` (field is `select: false`), compares hash via service
 3. `POST /api/auth/google` — verifies Google ID token, creates user if new, issues JWT
-4. Password reset — crypto token, SHA256 hash + 10min expiry, email sent. `PUT /reset-password/:token` validates and updates.
+4. Password reset — crypto token, SHA256 hash + 10min expiry, email sent
 
-**Auth middleware (`auth.middleware.ts`):**
-- Extracts `Bearer` token, verifies JWT (returns **401** on expired/invalid)
-- Fetches user (`_id email role banned profile.verified`) — lightweight query
-- Rejects banned users with **403**
-- `authorizeRoles(...roles)` — checks `req.user.role` in allowed list
-- Host routes additionally require `profile.verified === true`
+**Auth middleware:**
+- Extracts `Bearer` token, verifies JWT (returns 401 on expired/invalid)
+- Fetches user — lightweight query
+- Rejects banned users with 403
+- `authorizeRoles(...roles)` — checks role in allowed list
 
 **Frontend:**
-- `authSlice` stores `user` + `token` in Redux + `localStorage`
+- `authSlice` stores `user` + `token` in Redux + localStorage
 - `apiFetch.ts` interceptor auto-attaches `Authorization: Bearer <token>`
-- On 401 response, auto-dispatches `logout()`, clears storage, redirects to `/`
-- `ProtectedRoute.tsx` checks `isAuthenticated` and optional `allowedRoles`
+- On 401 response, auto-logout + redirect to `/`
+- `ProtectedRoute` checks `isAuthenticated` and optional `allowedRoles`
 
 ### 2. Listing Search & Discovery
 
 **`GET /api/listings`** supports:
 - `lng, lat, radius` — geospatial `$near` query
-- `category` — exact match (default "Trending")
+- `category` — exact match
 - `search` — regex on title (case-insensitive)
 - `minPrice, maxPrice` — range filter
 - `amenities` — `$all` match (comma-separated)
 - `page, pageSize` — pagination
 - Redis cache: 300s TTL
 
-**AI Smart Search** `POST /api/listings/smart-search` — sends natural language prompt to Gemini, extracts structured JSON, executes MongoDB query.
+**AI Smart Search** `POST /api/listings/smart-search` — sends natural language prompt to Gemini, extracts structured JSON, executes MongoDB query via `listing.service.ts`.
 
 ### 3. Booking Flow
 
-1. `POST /api/bookings/create` — validates dates, checks availability, calculates price (all-inclusive)
-2. `POST /api/payments/create-order` — Razorpay order created
+1. `POST /api/bookings/create` — validates dates, checks availability, calculates price
+2. `POST /api/payments/create-order` — Razorpay order created via `payment.service.ts`
 3. Frontend opens Razorpay checkout
-4. `POST /api/payments/verify` — HMAC SHA256 signature verification
+4. `POST /api/payments/verify` — HMAC SHA256 signature verification via `payment.service.ts`
 5. Booking → `"confirmed"`, invoice emailed, host notified
-6. `PATCH /bookings/:id/cancel` — full refund (see Refund Flow)
-7. Cron (midnight): `status: "completed"` for past bookings
+6. `PATCH /bookings/:id/cancel` — refund via `booking.service.ts`
+7. Cron: auto-complete past bookings
 
 **Booking statuses:** `pending → confirmed → completed`
 
 ### 4. Cancellation & Refund Flow
+
+Cancellation logic lives in `booking.service.ts` with shared refund policy from `refund-policy.service.ts`:
 
 ```
 Cancel → PATCH /bookings/:id/cancel
   → Ownership check
   → Status check (not completed/cancelled)
   → Prevent double refund
-  → Compute refund via cancellationPolicy
-  → Razorpay refund API
+  → Compute refund via calculateRefundAmount()
+  → Razorpay refund API via payment.service.ts
   → Booking: status="cancelled", refunded=true
   → Release blocked dates
-  → Create Refund record (status="processing")
+  → Create Refund record
   → Email + notification to guest + host
-  → Webhook: refund.processed → status="completed"
-  → Webhook: refund.failed → status="failed"
 ```
 
 #### Cancellation Policy
@@ -274,24 +283,18 @@ Cancel → PATCH /bookings/:id/cancel
 ### 5. Reviews
 
 - `POST /api/reviews/:listingId` — requires completed booking ownership
-- Zod: `rating` (1-5), `comment` (10-1000 chars)
 - `PUT /api/reviews/:id` — 48h edit window
-- Listing rating/numReviews recomputed on write
+- Listing rating/numReviews recomputed via `recalculateListingStats()` in `review.service.ts`
 - AI summary: `GET /reviews/listing/:id/summary`
-
-**Frontend (ListingDetails.tsx):**
-- Already reviewed → "Your Review" card with edit button
-- No review → inline form with star rating
-- User's review filtered from "All Reviews"
 
 ### 6. Wishlist
 
 - `POST /api/users/wishlist/:listingId` — toggles listing in user's `wishlist` array
-- Navbar displays `wishlist.length` badge on heart icon
+- Navbar displays `wishlist.length` badge
 
 ### 7. Real-Time Chat
 
-**Socket.IO** events:
+**Socket.IO** events via `socket.service.ts`:
 
 | Client → Server          | Server → Client          |
 | ------------------------ | ------------------------ |
@@ -300,81 +303,63 @@ Cancel → PATCH /bookings/:id/cancel
 | `send_message`           | `user_typing`            |
 | `typing` / `stop_typing` | `user_stopped_typing`    |
 
-- Each booking is a room identified by `bookingId`
-- Messages stored in `Message` model
-- 2s typing inactivity timer → emits `stop_typing`
-- Typing bubble with bouncing dots on frontend
-
 ### 8. Host Verification
 
 1. Apply at `/become-host` → `POST /api/host-application/apply`
-2. Admin reviews at `/admin/hosts` → approve/reject
+2. Admin reviews at `/admin/hosts`
 3. Approved → `role: "host"` + `profile.verified: true`
-4. Route protection checks `profile.verified`
 
 ### 9. Admin Panel
 
 Protected behind `authorizeRoles("admin")`:
-
-- **Dashboard** — 5 KPIs + revenue chart + booking chart + category stats
-- **Users** — search, role filter, pagination, ban/unban
+- **Dashboard** — 5 KPIs + revenue chart + booking chart
+- **Users** — search, ban/unban
 - **Listings** — approve/reject
 - **Bookings** — filter by status
-- **Hosts** — three tabs, approve/reject, view ID proofs
+- **Hosts** — approve/reject applications
 
 ### 10. Host Dashboard
 
 - 4 KPI cards: Earnings, Properties, Bookings, Pending
-- SVG earnings area chart (monthly)
-- Summary sidebar + monthly breakdown table
+- SVG earnings area chart
+- Summary sidebar + monthly breakdown
 - Recent bookings (5 latest)
-- Create / edit / delete listings
+- Create/edit/delete listings
 
 ### 11. AI Itinerary Generator
 
-**Public (listing-based):** `POST /api/itineraries/listing/:id/generate`
-- 1 free per property per user
-- Blocks if user has a booking (redirects to Trips)
-
-**Booking-based:** `POST /api/itineraries/:bookingId/generate`
-- Up to **3 versions** per booking
-- Each regenerate increments `version` (1→2→3)
-
-**Frontend:**
-- Generation form modal with fields: people, group, style, budget, days
-- "Regenerations left: N/3" badge
-- Beautified view modal with gradient header + ReactMarkdown
+- **Listing-based:** `POST /api/itineraries/listing/:id/generate` (1 free per listing)
+- **Booking-based:** `POST /api/itineraries/:bookingId/generate` (up to 3 versions)
+- Form modal: people, group, style, budget, days
+- Markdown output rendered with ReactMarkdown
 
 ### 12. Recommendation Engine (4-Level)
 
 | Level | Method                              |
 | ----- | ----------------------------------- |
 | 1     | Geospatial `$near` within 50km      |
-| 2     | Content-based scoring (category, city, amenities, price) |
-| 3     | Collaborative filtering (co-occurrence) |
-| 4     | User preference personalization      |
-
-**Redis caching:** 10-20 min TTL per key type.
+| 2     | Content-based scoring               |
+| 3     | Collaborative filtering             |
+| 4     | User preference personalization     |
 
 ### 13. Calendar Availability
 
-- `GET /api/listings/:id/availability` — returns unavailable dates merged from `blockedDates` + confirmed bookings
-- **Host view:** Month grid, click to toggle blocked dates
-- **Guest view:** 2-month side-by-side, gray unavailable dates, range highlighting
+- `GET /api/listings/:id/availability` — returns unavailable dates from `blockedDates` + bookings
+- Host: month grid, click to toggle blocked dates
+- Guest: 2-month side-by-side, grey unavailable dates
 
-### 14. Skeleton Loaders
+### 14. Loading States
 
-| Component         | Usage              |
-| ----------------- | ------------------ |
-| `Skeleton`        | Base animate-pulse |
-| `SkeletonCard`    | Listing card       |
-| `SkeletonTable`   | Admin tables       |
-| `SkeletonChart`   | 12-column bars     |
-| `SkeletonKPICard` | KPI metric cards   |
-| `SkeletonReviewCard` | Review skeletons |
+| Component       | Usage              |
+| --------------- | ------------------ |
+| `Skeleton`      | Base animate-pulse |
+| `SkeletonCard`  | Listing card       |
+| `SkeletonTable` | Admin tables       |
+| `SkeletonChart` | 12-column bars     |
+| `SkeletonKPICard` | KPI metric cards |
 | `SkeletonLineGroup` | n progressively shorter lines |
-
-Every page with async data uses matching skeletons.
+| `Spinner`       | Inline (sm/md/lg)  |
+| `PageSpinner`   | Full-page loading  |
 
 ---
 
@@ -414,7 +399,6 @@ Every page with async data uses matching skeletons.
 | PUT    | `/profile`                | Private | Update name + avatar  |
 | GET    | `/wishlist`               | Private | Populated wishlist    |
 | POST   | `/wishlist/:listingId`    | Private | Toggle wishlist       |
-| PUT    | `/become-host`            | Private | Legacy host upgrade   |
 
 ### Listings (`/api/listings`)
 
@@ -428,10 +412,11 @@ Every page with async data uses matching skeletons.
 | DELETE | `/:id`                      | Host/Admin | Delete listing          |
 | POST   | `/ai-description`           | Host/Admin | AI description          |
 | GET    | `/host`                     | Host/Admin | My listings             |
-| GET    | `/analytics/earnings`       | Host/Admin | Earnings data           |
 | GET    | `/:id/blocked-dates`        | Private    | Blocked dates           |
 | POST   | `/:id/blocked-dates`        | Host/Admin | Toggle blocked date     |
 | GET    | `/:id/availability`         | Public     | Unavailable dates       |
+| GET    | `/:id/similar`              | Public     | Similar listings        |
+| GET    | `/analytics/earnings`       | Host/Admin | Earnings data           |
 
 ### Bookings (`/api/bookings`)
 
@@ -443,7 +428,6 @@ Every page with async data uses matching skeletons.
 | GET    | `/:id`                 | Private    | Booking detail           |
 | PATCH  | `/:id/cancel`          | Private    | Cancel + refund          |
 | PATCH  | `/:id/host-cancel`     | Host/Admin | Host cancel + refund     |
-| GET    | `/chat/:bookingId`     | Private    | Chat messages            |
 
 ### Payments (`/api/payments`)
 
@@ -501,7 +485,6 @@ Every page with async data uses matching skeletons.
 | Method | Endpoint                        | Auth    | Description                    |
 | ------ | ------------------------------- | ------- | ------------------------------ |
 | POST   | `/listing/:listingId/generate`  | Private | Public itinerary (1 free)      |
-| GET    | `/listing/:listingId`           | Private | Saved public itinerary         |
 | POST   | `/:bookingId/generate`          | Private | Booking itinerary (max 3)      |
 | GET    | `/:bookingId`                   | Private | Get booking itinerary          |
 | PUT    | `/:id`                          | Private | Update itinerary content       |
@@ -553,12 +536,12 @@ Every page with async data uses matching skeletons.
 ## Production Considerations
 
 ### Error Resilience
-- `uncaughtException` + `unhandledRejection` handlers — no `process.exit()`
+- `uncaughtException` + `unhandledRejection` handlers
 - Graceful shutdown: HTTP → MongoDB → Redis
-- Socket.IO error catch + emit to client
-- DB auto-reconnect with 5 retries + exponential backoff
-- All services use lazy factory pattern (`getAI()`, `getRazorpay()`)
-- Email/notification/analytics failures never block primary flow
+- Socket.IO error catch per event (`safeOn` wrapper)
+- DB auto-reconnect with retries
+- Global error handler in `middlewares/error.middleware.ts`
+- Email/notification failures never block primary flow
 
 ### Rate Limiting
 | Route               | Limit                    |
@@ -567,16 +550,11 @@ Every page with async data uses matching skeletons.
 | `/api/auth/login`   | 10 req / 15 min          |
 | `/api/payments/verify` | 20 req / 15 min       |
 
-### CORS
-- Reads `ALLOWED_ORIGINS` from env (comma-separated)
-- `*` disables credentials; specific origins enable credentials
-
 ### Security
 - Passwords: `select: false`, bcrypt 10 rounds
 - JWT: 7-day expiry, verified on every protected route
 - Zod validation on all mutation endpoints
 - Admin self-ban prevention
-- Host routes require `profile.verified`
 - Razorpay HMAC SHA256 on webhooks + verify
 - AI: `callWithRetry` with exponential backoff on 429/503
 
@@ -616,8 +594,8 @@ wishlist [Listing], resetPasswordToken, resetPasswordExpire
 ```
 title, description, amenities [], price, category, locationName,
 location { type: "Point", coordinates [lng, lat] }, images [],
-host (ref User), status (pending|approved|rejected),
-blockedDates [Date], cancellationPolicy (flexible|moderate|strict)
+host (ref User), status, blockedDates [Date],
+cancellationPolicy (flexible|moderate|strict)
 ```
 
 ### Booking
@@ -626,14 +604,6 @@ listing (ref Listing), user (ref User), host (ref User),
 checkIn, checkOut, totalPrice, status (pending|confirmed|
 cancelled|completed), razorpayOrderId, razorpayPaymentId,
 cancellationReason, refunded
-```
-
-### Refund
-```
-booking (ref Booking), user (ref User), paymentId,
-originalAmount, refundAmount, deductionAmount,
-cancellationPolicy, reason, status (processing|completed|failed),
-razorpayRefundId, processedAt, failedAt, failureReason
 ```
 
 ### Review
@@ -649,9 +619,7 @@ booking (ref Booking), sender (ref User), receiver (ref User), text
 
 ### Notification
 ```
-user (ref User), type (booking_confirmed, booking_cancelled,
-new_message, new_booking, review_received, refund_processed,
-refund_failed), title, message, link, read
+user (ref User), type, title, message, link, read
 ```
 
 ### HostApplication
@@ -666,18 +634,4 @@ adminNote, reviewedBy (ref User), reviewedAt
 user (ref User), booking? (ref Booking), listing (ref Listing),
 location, totalDays, preferences { people, groupType, style,
 budget }, content (markdown), version (1-3)
-```
-
-### UserPreference
-```
-user (ref User, unique), cities [], categories [], amenities [],
-avgBudget, priceRange { min, max }
-```
-
-### RecommendationAnalytics
-```
-user (ref User), listing (ref Listing),
-recommendedListing (ref Listing), source (home|listing_details|
-booking_success|trips|wishlist), action (view|click|booking),
-sessionId
 ```

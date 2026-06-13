@@ -1,22 +1,18 @@
 import axios from "axios";
 import { toast } from "sonner";
-import { store } from "../app/store"; // We will build this next
-import { logout } from "../features/auth/authSlice";
+import { store } from "@/app/store"; 
+import { logout } from "@/features/auth/authSlice";
 
-// Create a centralized Axios instance
 const apiFetch = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000/api",
 });
 
-// REQUEST INTERCEPTOR: Automatically attach the JWT token if it exists
 apiFetch.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("stayfinder_token");
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    // If sending FormData, strip ALL Content-Type headers so the browser
-    // sets multipart/form-data; boundary=--- correctly.
     if (config.data instanceof FormData && config.headers) {
       if (typeof config.headers.delete === "function") {
         config.headers.delete("Content-Type");
@@ -31,14 +27,12 @@ apiFetch.interceptors.request.use(
   (error) => Promise.reject(error),
 );
 
-// RESPONSE INTERCEPTOR: Catch global errors and handle expired tokens
 apiFetch.interceptors.response.use(
   (response) => response,
   (error) => {
     const status = error.response?.status;
     const message = error.response?.data?.message || "Something went wrong";
 
-    // If the token is expired or invalid, auto-logout the user globally
     if (status === 401) {
       store.dispatch(logout());
       localStorage.removeItem("stayfinder_token");
@@ -55,3 +49,13 @@ apiFetch.interceptors.response.use(
 );
 
 export default apiFetch;
+
+export const apiGet = async (url: string, params = {}) => {
+  const response = await apiFetch.get(url, { params });
+  return response.data;
+};
+
+export const apiPost = async (url: string, body?: any) => {
+  const response = await apiFetch.post(url, body);
+  return response.data;
+};

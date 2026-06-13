@@ -9,8 +9,8 @@ import {
   Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
-import apiFetch from "../../services/apiFetch";
-import { Skeleton, SkeletonKPICard, SkeletonChart } from "../../components/ui/skeleton";
+import apiFetch from "@/services/apiFetch";
+import { Skeleton, SkeletonKPICard, SkeletonChart } from "@/components/ui/skeleton";
 
 interface DashboardStats {
   totalUsers: number;
