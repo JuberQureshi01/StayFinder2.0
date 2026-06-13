@@ -17,8 +17,13 @@
     "@google/genai": "^2.6.0",
     "@types/bcrypt": "^6.0.0",
     "@types/express": "^5.0.6",
+    "@types/ioredis": "^4.28.10",
     "@types/jsonwebtoken": "^9.0.10",
+    "@types/multer": "^2.1.0",
     "@types/node": "^25.6.0",
+    "@types/nodemailer": "^8.0.0",
+    "@types/pdfkit": "^0.17.6",
+    "@types/streamifier": "^0.1.2",
     "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.3",
     "cloudinary": "^2.10.0",
@@ -30,7 +35,6 @@
     "ioredis": "^5.10.1",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.6.0",
-    "node-cron": "^3.0.3",
     "multer": "^2.1.1",
     "nodemailer": "^8.0.7",
     "pdfkit": "^0.18.0",
@@ -43,11 +47,6 @@
   },
   "devDependencies": {
     "@faker-js/faker": "^10.4.0",
-    "@types/ioredis": "^4.28.10",
-    "@types/multer": "^2.1.0",
-    "@types/nodemailer": "^8.0.0",
-    "@types/pdfkit": "^0.17.6",
-    "@types/streamifier": "^0.1.2",
     "nodemon": "^3.1.14",
     "ts-node": "^10.9.2"
   }

@@ -1,6 +1,7 @@
 import Listing from "../modules/listing/listing.model";
 import Booking from "../modules/booking/booking.model";
 import { CloudinaryService } from "./cloudinary.service";
+import type { UploadedFile } from "../middlewares/auth.middleware";
 
 export const buildSearchQuery = (params: any) => {
   const { lng, lat, category, radius, minPrice, maxPrice, amenities, search } = params;
@@ -58,7 +59,7 @@ export const buildCountQuery = (query: any, lng: string, lat: string, radius: st
   return countQuery;
 };
 
-export const createListingService = async (data: any, files: Express.Multer.File[], userId: string) => {
+export const createListingService = async (data: any, files: UploadedFile[], userId: string) => {
   let imageUrls: string[] = [];
   if (files && files.length > 0) {
     const uploadPromises = files.map((file) =>
@@ -217,7 +218,7 @@ export const getHostEarningsService = async (hostId: string) => {
   return { monthlyEarnings: earnings, totalEarnings, totalBookings: totalHostBookings };
 };
 
-export const updateListingService = async (listingId: string, userId: string, data: any, files: Express.Multer.File[]) => {
+export const updateListingService = async (listingId: string, userId: string, data: any, files: UploadedFile[]) => {
   const listing = await Listing.findById(listingId);
   if (!listing) throw { statusCode: 404, message: "Listing not found." };
   if (listing.host.toString() !== userId) {

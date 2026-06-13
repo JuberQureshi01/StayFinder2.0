@@ -2,7 +2,7 @@ import { Response } from "express";
 import Listing from "./listing.model";
 import { AIService } from "../../services/ai.service";
 import { asyncHandler } from "../../middlewares/async.middleware";
-import { AuthenticatedRequest } from "../../middlewares/auth.middleware";
+import { AuthenticatedRequest, UploadedFile } from "../../middlewares/auth.middleware";
 import {
   createListingService,
   buildSearchQuery,
@@ -16,7 +16,7 @@ import {
 } from "../../services/listing.service";
 
 export const createListing = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  const listing = await createListingService(req.body, req.files as Express.Multer.File[], req.user._id);
+  const listing = await createListingService(req.body, req.files as UploadedFile[], req.user._id);
   return res.status(201).json({ message: "Listing created successfully.", listing });
 });
 
@@ -124,7 +124,7 @@ export const getHostListings = asyncHandler(async (req: AuthenticatedRequest, re
 });
 
 export const updateListing = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  const listing = await updateListingService(req.params.id as string, req.user._id.toString(), req.body, req.files as Express.Multer.File[]);
+  const listing = await updateListingService(req.params.id as string, req.user._id.toString(), req.body, req.files as UploadedFile[]);
   return res.status(200).json({ message: "Listing updated.", listing });
 });
 
