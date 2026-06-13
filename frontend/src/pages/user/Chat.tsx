@@ -160,7 +160,7 @@ const Chat = () => {
             <ArrowLeft className="h-5 w-5 text-gray-600" />
           </button>
           <div>
-            <h2 className="text-lg font-bold text-gray-900">Conversation</h2>
+            <h1 className="text-lg font-bold text-gray-900">Conversation</h1>
             <p className="text-xs text-gray-500 flex items-center gap-1">
               <ShieldCheck className="h-3 w-3 text-green-600" /> End-to-end encrypted
             </p>

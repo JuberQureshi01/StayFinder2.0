@@ -53,6 +53,9 @@ const SearchPage = () => {
     <div className="bg-white">
       <main className="flex flex-col" style={{ height: "calc(100vh - 4rem)" }}>
         <div className="z-30 border-b bg-white px-3 py-3 sm:px-6 sm:py-4 shadow-sm">
+          <div className="mb-2 flex items-center justify-between">
+            <h1 className="text-xl font-bold text-gray-900">Search Properties</h1>
+          </div>
           <SearchFilters onSearch={fetchData} />
         </div>
 
